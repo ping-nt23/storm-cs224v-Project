@@ -76,7 +76,7 @@ To install the knowledge storm library, use `pip install knowledge-storm`.
 You could also install the source code which allows you to modify the behavior of STORM engine directly.
 1. Clone the git repository.
     ```shell
-    git clone https://github.com/stanford-oval/storm.git
+    git clone https://github.com/ping-nt23/storm-cs224v-Project.git
     cd storm
     ```
    
@@ -84,7 +84,7 @@ You could also install the source code which allows you to modify the behavior o
    ```shell
    conda create -n storm python=3.11
    conda activate storm
-   pip install -r requirements.txt
+   python -m pip install -r requirements.txt
    ```
    
 
