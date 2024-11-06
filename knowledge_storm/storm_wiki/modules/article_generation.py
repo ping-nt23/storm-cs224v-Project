@@ -22,7 +22,7 @@ class StormArticleGenerationModule(ArticleGenerationModule):
         self,
         article_gen_lm=Union[dspy.dsp.LM, dspy.dsp.HFModel],
         retrieve_top_k: int = 5,
-        max_thread_num: int = 10,
+        max_thread_num: int = 1,
     ):
         super().__init__()
         self.retrieve_top_k = retrieve_top_k
@@ -161,7 +161,8 @@ class ConvToSection(dspy.Module):
 
 
 class WriteSection(dspy.Signature):
-    """Write a Wikipedia section based on the collected information.
+    # Pann: edit not to be Wikipedia
+    """Write a news section based on the collected information.
 
     Here is the format of your writing:
         1. Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, "###" Title" to indicate subsubsection title, and so on.

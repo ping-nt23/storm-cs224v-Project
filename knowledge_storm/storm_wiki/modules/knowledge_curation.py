@@ -35,8 +35,8 @@ class ConvSimulator(dspy.Module):
         max_turn: int,
     ):
         super().__init__()
-        self.wiki_writer = WikiWriter(engine=question_asker_engine)
-        self.topic_expert = TopicExpert(
+        self.wiki_writer = WikiWriter(engine=question_asker_engine) # Pann: edit
+        self.topic_expert = TopicExpert( # Pann : edit
             engine=topic_expert_engine,
             max_search_queries=max_search_queries_per_turn,
             search_top_k=search_top_k,
@@ -75,6 +75,7 @@ class ConvSimulator(dspy.Module):
                 search_queries=expert_output.queries,
                 search_results=expert_output.searched_results,
             )
+            # Pann: add graph logic here
             dlg_history.append(dlg_turn)
             callback_handler.on_dialogue_turn_end(dlg_turn=dlg_turn)
 
@@ -125,7 +126,7 @@ class WikiWriter(dspy.Module):
         return dspy.Prediction(question=question)
 
 
-class AskQuestion(dspy.Signature):
+class AskQuestion(dspy.Signature): # Pann: Edit to also have graph. Also edit to not be Wikipedia writer
     """You are an experienced Wikipedia writer. You are chatting with an expert to get information for the topic you want to contribute. Ask good questions to get more useful information relevant to the topic.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
     Please only ask a question at a time and don't ask what you have asked before. Your questions should be related to the topic you want to write.
@@ -136,7 +137,7 @@ class AskQuestion(dspy.Signature):
     question = dspy.OutputField(format=str)
 
 
-class AskQuestionWithPersona(dspy.Signature):
+class AskQuestionWithPersona(dspy.Signature): # Pann: Edit to also have graph. Also edit to not be Wikipedia writer
     """You are an experienced Wikipedia writer and want to edit a specific page. Besides your identity as a Wikipedia writer, you have specific focus when researching the topic.
     Now, you are chatting with an expert to get information. Ask good questions to get more useful information.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.

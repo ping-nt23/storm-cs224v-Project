@@ -77,7 +77,7 @@ class AzureOpenAIEmbeddingModel:
 
 def get_text_embeddings(
     texts: Union[str, List[str]],
-    max_workers: int = 5,
+    max_workers: int = 1,
     embedding_cache: Optional[Dict[str, np.ndarray]] = None,
 ) -> Tuple[np.ndarray, int]:
     """

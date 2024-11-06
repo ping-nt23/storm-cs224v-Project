@@ -125,12 +125,12 @@ class WriteOutline(dspy.Module):
         return dspy.Prediction(outline=outline, old_outline=old_outline)
 
 
-class WritePageOutline(dspy.Signature):
-    """Write an outline for a Wikipedia page.
+class WritePageOutline(dspy.Signature): # Pann: edit the format of the article
+    """Write an outline for a news article.
     Here is the format of your writing:
-    1. Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, "###" Title" to indicate subsubsection title, and so on.
+    1. Use '#' Title to indicate section title, '##' Title to indicate subsection title, '###' Title to indicate subsubsection title, and so on.
     2. Do not include other information.
-    3. Do not include topic name itself in the outline.
+    3. Do not include the topic name itself in the outline.
     """
 
     topic = dspy.InputField(prefix="The topic you want to write: ", format=str)
@@ -150,14 +150,13 @@ class NaiveOutlineGen(dspy.Module):
         return dspy.Prediction(outline=outline)
 
 
-class WritePageOutlineFromConv(dspy.Signature):
-    """Improve an outline for a Wikipedia page. You already have a draft outline that covers the general information. Now you want to improve it based on the information learned from an information-seeking conversation to make it more informative.
+class WritePageOutlineFromConv(dspy.Signature): # Pann: edit the format of the article
+    """Improve an outline for a news article. You already have a draft outline that covers the general information. Now you want to enhance it based on insights gained from recent news coverage to make it more engaging and up-to-date.
     Here is the format of your writing:
-    1. Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, "###" Title" to indicate subsubsection title, and so on.
+    1. Use '#' Title to indicate section title, '##' Title to indicate subsection title, '###' Title to indicate subsubsection title, and so on.
     2. Do not include other information.
-    3. Do not include topic name itself in the outline.
+    3. Do not include the topic name itself in the outline.
     """
-
     topic = dspy.InputField(prefix="The topic you want to write: ", format=str)
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
     old_outline = dspy.OutputField(prefix="Current outline:\n", format=str)
