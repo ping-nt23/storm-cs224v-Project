@@ -233,13 +233,15 @@ class STORMWikiRunner(Engine):
         self.lm_configs.init_check()
         self.apply_decorators()
 
+        self.graph_mindmap = {}
+
     def run_knowledge_curation_module(
         self,
         ground_truth_url: str = "None",
         callback_handler: BaseCallbackHandler = None,
     ) -> StormInformationTable:
 
-        information_table, conversation_log = (
+        information_table, conversation_log, self.graph_mindmap = (
             self.storm_knowledge_curation_module.research(
                 topic=self.topic,
                 ground_truth_url=ground_truth_url,
@@ -264,10 +266,11 @@ class STORMWikiRunner(Engine):
         information_table: StormInformationTable,
         callback_handler: BaseCallbackHandler = None,
     ) -> StormArticle:
-
+        print("mindmap to generate is", self.graph_mindmap)
         outline, draft_outline = self.storm_outline_generation_module.generate_outline(
             topic=self.topic,
             information_table=information_table,
+            graph_mindmap=self.graph_mindmap,
             return_draft_outline=True,
             callback_handler=callback_handler,
         )

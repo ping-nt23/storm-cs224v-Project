@@ -161,8 +161,7 @@ class ConvToSection(dspy.Module):
 
 
 class WriteSection(dspy.Signature):
-    # Pann: edit not to be Wikipedia
-    """Write a news section based on the collected information.
+    """Write a news section based on the collected information. Do not include extraneous background information. It is assumed the readers know background information about the topic.
 
     Here is the format of your writing:
         1. Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, "###" Title" to indicate subsubsection title, and so on.

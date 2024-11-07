@@ -24,7 +24,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 class ConvSimulator(dspy.Module):
-    """Simulate a conversation between a Wikipedia writer with specific persona and an expert."""
+    """Simulate a conversation between a recent news article writer with specific persona and an expert."""
 
     def __init__(
         self,
@@ -45,6 +45,7 @@ class ConvSimulator(dspy.Module):
             retriever=retriever,
         )
         self.max_turn = max_turn
+        self.graph_mindmap = {}
 
     def forward(
         self,
@@ -55,14 +56,14 @@ class ConvSimulator(dspy.Module):
     ):
         """
         topic: The topic to research.
-        persona: The persona of the Wikipedia writer.
+        persona: The persona of the recent news article writer.
         ground_truth_url: The ground_truth_url will be excluded from search to avoid ground truth leakage in evaluation.
         """
         print("HELLO PANN")
         dlg_history: List[DialogueTurn] = []
         for _ in range(self.max_turn):
             user_utterance = self.wiki_writer(
-                topic=topic, persona=persona, dialogue_turns=dlg_history
+                topic=topic, persona=persona, dialogue_turns=dlg_history, graph_mindmap=self.graph_mindmap
             ).question
             if user_utterance == "":
                 logging.error("Simulated article writer utterance is empty.")
@@ -80,7 +81,7 @@ class ConvSimulator(dspy.Module):
             )
             # Pann: add graph logic here
             passage = expert_output.answer
-            self.graph_processor.process_passage(passage)
+            self.graph_mindmap = self.graph_processor.process_passage(passage)
 
             dlg_history.append(dlg_turn)
             callback_handler.on_dialogue_turn_end(dlg_turn=dlg_turn)
@@ -104,6 +105,7 @@ class WikiWriter(dspy.Module):
         topic: str,
         persona: str,
         dialogue_turns: List[DialogueTurn],
+        graph_mindmap: str,
         draft_page=None,
     ):
         conv = []
@@ -118,45 +120,48 @@ class WikiWriter(dspy.Module):
         conv = "\n".join(conv)
         conv = conv.strip() or "N/A"
         conv = ArticleTextProcessing.limit_word_count_preserve_newline(conv, 2500)
-
         with dspy.settings.context(lm=self.engine):
             if persona is not None and len(persona.strip()) > 0:
                 question = self.ask_question_with_persona(
-                    topic=topic, persona=persona, conv=conv
+                    topic=topic, persona=persona, conv=conv, graph_mindmap=graph_mindmap
                 ).question
             else:
                 question = self.ask_question(
-                    topic=topic, persona=persona, conv=conv
+                    topic=topic, persona=persona, conv=conv, graph_mindmap=graph_mindmap
                 ).question
-
+        print('pann question', question)
         return dspy.Prediction(question=question)
 
 
-class AskQuestion(dspy.Signature): # Pann TODO: Edit to also have graph. Also edit to not be Wikipedia writer
-    """You are an experienced Wikipedia writer. You are chatting with an expert to get information for the topic you want to contribute. Ask good questions to get more useful information relevant to the topic.
+class AskQuestion(dspy.Signature):
+    """You are an experienced recent news article writer. You are chatting with an expert to get information for the topic you want to contribute. Ask good questions to get more useful information relevant to the topic.
+    You have also drafted a graph mindmap of your information gathering about the topic so far. Ask questions that will ensure balancedness to the graph to not deviate too much into a specific topic or be too broad.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
     Please only ask a question at a time and don't ask what you have asked before. Your questions should be related to the topic you want to write.
     """
 
     topic = dspy.InputField(prefix="Topic you want to write: ", format=str)
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
-    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=dict)
+    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=str)
+    print('AskQuestion', graph_mindmap)
     question = dspy.OutputField(format=str)
 
 
-class AskQuestionWithPersona(dspy.Signature): # Pann TODO: Edit to also have graph. Also edit to not be Wikipedia writer
-    """You are an experienced Wikipedia writer and want to edit a specific page. Besides your identity as a Wikipedia writer, you have specific focus when researching the topic.
+class AskQuestionWithPersona(dspy.Signature):
+    """You are an experienced recent news article writer and want to edit a specific page. Besides your identity as a recent news article writer, you have specific focus when researching the topic.
     Now, you are chatting with an expert to get information. Ask good questions to get more useful information.
+    You have also drafted a graph mindmap of your information gathering about the topic so far. Ask questions that will ensure balancedness to the graph to not deviate too much into a specific topic or be too broad.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
     Please only ask a question at a time and don't ask what you have asked before. Your questions should be related to the topic you want to write.
     """
 
     topic = dspy.InputField(prefix="Topic you want to write: ", format=str)
     persona = dspy.InputField(
-        prefix="Your persona besides being a Wikipedia writer: ", format=str
+        prefix="Your persona besides being a recent news article writer: ", format=str
     )
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
-    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=dict)
+    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=str)
+    print('AskQuestionWithPersona', graph_mindmap)
     question = dspy.OutputField(format=str)
 
 
@@ -174,7 +179,7 @@ class QuestionToQuery(dspy.Signature):
 
 
 class AnswerQuestion(dspy.Signature):
-    """You are an expert who can use information effectively. You are chatting with a Wikipedia writer who wants to write a Wikipedia page on topic you know. You have gathered the related information and will now use the information to form a response.
+    """You are an expert who can use information effectively. You are chatting with a recent news article writer who wants to write a recent news article page on topic you know. You have gathered the related information and will now use the information to form a response.
     Make your response as informative as possible, ensuring that every sentence is supported by the gathered information. If the [gathered information] is not directly related to the [topic] or [question], provide the most relevant answer based on the available information. If no appropriate answer can be formulated, respond with, “I cannot answer this question based on the available information,” and explain any limitations or gaps.
     """
 
@@ -361,7 +366,7 @@ class StormKnowledgeCurationModule(KnowledgeCurationModule):
         max_perspective: int = 0,
         disable_perspective: bool = True,
         return_conversation_log=False,
-    ) -> Union[StormInformationTable, Tuple[StormInformationTable, Dict]]:
+    ) -> Union[StormInformationTable, Tuple[StormInformationTable, Dict, Dict]]:
         """
         Curate information and knowledge for the given topic
 
@@ -398,5 +403,5 @@ class StormKnowledgeCurationModule(KnowledgeCurationModule):
         if return_conversation_log:
             return information_table, StormInformationTable.construct_log_dict(
                 conversations
-            )
-        return information_table
+            ), self.conv_simulator.graph_mindmap
+        return information_table, self.conv_simulator.graph_mindmap

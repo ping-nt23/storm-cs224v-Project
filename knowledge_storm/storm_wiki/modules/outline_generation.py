@@ -23,6 +23,7 @@ class StormOutlineGenerationModule(OutlineGenerationModule):
         self,
         topic: str,
         information_table: StormInformationTable,
+        graph_mindmap: str,
         old_outline: Optional[StormArticle] = None,
         callback_handler: BaseCallbackHandler = None,
         return_draft_outline=False,
@@ -59,6 +60,7 @@ class StormOutlineGenerationModule(OutlineGenerationModule):
         result = self.write_outline(
             topic=topic,
             dlg_history=concatenated_dialogue_turns,
+            graph_mindmap=graph_mindmap,
             callback_handler=callback_handler,
         )
         article_with_outline_only = StormArticle.from_outline_str(
@@ -73,7 +75,7 @@ class StormOutlineGenerationModule(OutlineGenerationModule):
 
 
 class WriteOutline(dspy.Module):
-    """Generate the outline for the Wikipedia page."""
+    """Generate the outline for the recent news article page."""
 
     def __init__(self, engine: Union[dspy.dsp.LM, dspy.dsp.HFModel]):
         super().__init__()
@@ -85,6 +87,7 @@ class WriteOutline(dspy.Module):
         self,
         topic: str,
         dlg_history,
+        graph_mindmap,
         old_outline: Optional[str] = None,
         callback_handler: BaseCallbackHandler = None,
     ):
@@ -98,7 +101,7 @@ class WriteOutline(dspy.Module):
             trimmed_dlg_history.append(turn)
         conv = "\n".join(
             [
-                f"Wikipedia Writer: {turn.user_utterance}\nExpert: {turn.agent_utterance}"
+                f"Recent News Article Writer: {turn.user_utterance}\nExpert: {turn.agent_utterance}"
                 for turn in trimmed_dlg_history
             ]
         )
@@ -116,7 +119,7 @@ class WriteOutline(dspy.Module):
                     )
             outline = ArticleTextProcessing.clean_up_outline(
                 self.write_page_outline(
-                    topic=topic, old_outline=old_outline, conv=conv
+                    topic=topic, old_outline=old_outline, conv=conv, graph_mindmap=graph_mindmap
                 ).outline
             )
             if callback_handler:
@@ -126,7 +129,7 @@ class WriteOutline(dspy.Module):
 
 
 class WritePageOutline(dspy.Signature): # Pann: edit the format of the article
-    """Write an outline for a news article.
+    """Write an outline for a recent news article. Do not include an extraneous background information. Focus primarily on recent events, controversies, or news about the topic.
     Here is the format of your writing:
     1. Use '#' Title to indicate section title, '##' Title to indicate subsection title, '###' Title to indicate subsubsection title, and so on.
     2. Do not include other information.
@@ -134,7 +137,7 @@ class WritePageOutline(dspy.Signature): # Pann: edit the format of the article
     """
 
     topic = dspy.InputField(prefix="The topic you want to write: ", format=str)
-    outline = dspy.OutputField(prefix="Write the Wikipedia page outline:\n", format=str)
+    outline = dspy.OutputField(prefix="Write the recent news article page outline:\n", format=str)
 
 
 class NaiveOutlineGen(dspy.Module):
@@ -158,12 +161,11 @@ class WritePageOutlineFromConv(dspy.Signature): # Pann: edit the format of the a
     1. Use '#' Title to indicate section title, '##' Title to indicate subsection title, '###' Title to indicate subsubsection title, and so on.
     2. Do not include other information.
     3. Do not include the topic name itself in the outline.
+    4. Do not include extraneous background information or definitions. It is assumed the reader knows the basic background about the topic.
     """
     topic = dspy.InputField(prefix="The topic you want to write: ", format=str)
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
-    # TODO: Pann add graph here!
-    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=dict)
-    
+    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=str)
     old_outline = dspy.OutputField(prefix="Current outline:\n", format=str)
     outline = dspy.OutputField(
         prefix='Write the article page outline (Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, ...):\n',

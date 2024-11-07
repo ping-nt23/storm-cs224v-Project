@@ -126,7 +126,10 @@ class MindmapGraph:
         self.count += 1
         plt.close()
         graph_data = nx.readwrite.json_graph.node_link_data(self.G_summaries, edges="edges")
-        print(json.dumps(graph_data, indent=2))
+        graph_mindmap = json.dumps(graph_data, indent=2)
+        print('type of', type(graph_mindmap))
+        print('graph_mindmap is', graph_mindmap)
+        return graph_mindmap
 
 
     # PANN: TODO REMOVE
