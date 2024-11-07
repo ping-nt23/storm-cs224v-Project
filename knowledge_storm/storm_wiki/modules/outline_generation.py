@@ -151,7 +151,9 @@ class NaiveOutlineGen(dspy.Module):
 
 
 class WritePageOutlineFromConv(dspy.Signature): # Pann: edit the format of the article
-    """Improve an outline for a news article. You already have a draft outline that covers the general information. Now you want to enhance it based on insights gained from recent news coverage to make it more engaging and up-to-date.
+    """Improve an outline for a news article. You already have a draft outline that covers the general information.
+    Now you want to improve it based on the information learned from an information-seeking conversation to make it more informative.
+    You also want to improve its balancedness based on the mindmap generated about the topic. Ensure to use the mindmap and its edge weights to include only the most relevant information and related the information together. Exclude any irrelevant data according to the graph mindmap.
     Here is the format of your writing:
     1. Use '#' Title to indicate section title, '##' Title to indicate subsection title, '###' Title to indicate subsubsection title, and so on.
     2. Do not include other information.
@@ -159,8 +161,11 @@ class WritePageOutlineFromConv(dspy.Signature): # Pann: edit the format of the a
     """
     topic = dspy.InputField(prefix="The topic you want to write: ", format=str)
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
+    # TODO: Pann add graph here!
+    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=dict)
+    
     old_outline = dspy.OutputField(prefix="Current outline:\n", format=str)
     outline = dspy.OutputField(
-        prefix='Write the Wikipedia page outline (Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, ...):\n',
+        prefix='Write the article page outline (Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, ...):\n',
         format=str,
     )

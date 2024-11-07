@@ -799,7 +799,7 @@ class TogetherClient(dspy.HFModel):
             }
 
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        time.sleep(5)
+        time.sleep(1)
         with self.session.post(self.api_base, headers=headers, json=body) as resp:
             resp_json = resp.json()
             # Log the token usage from the Together API response.

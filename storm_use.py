@@ -7,8 +7,7 @@ from knowledge_storm import STORMWikiRunnerArguments, STORMWikiRunner, STORMWiki
 def main(args):
     lm_configs = STORMWikiLMConfigs()
     together_kwargs = {
-        'api_key': "950355c3c42f5721ecff1331e416362254c0b1e45ed23f43519a856707a161dd",
-        # 'api_key': os.getenv("TOGETHER_API_KEY"),
+        'api_key': os.getenv("TOGETHER_API_KEY"),
         'temperature': 1.0,
         'top_p': 0.9,
         "stop": ('\n\n---',)
@@ -33,10 +32,11 @@ def main(args):
         search_top_k=args.search_top_k,
         max_thread_num=args.max_thread_num,
     )
-    rm = BingSearch(bing_search_api_key='f805d0b0fc294831bff52c67b6cfcb7c')
+    rm = BingSearch(bing_search_api_key='') # replace with Bing API key
     runner = STORMWikiRunner(engine_args, lm_configs, rm)
 
-    topic = 'Recent News about' + input('Topic: ')
+    topic = input('Topic: ')
+    # topic = 'Recent News about' + input('Topic: ')
     try:
         runner.run(
             topic=topic,
@@ -71,9 +71,9 @@ if __name__ == '__main__':
                         help='If True, polish the article by adding a summarization section and (optionally) removing '
                              'duplicate content.')
     # hyperparameters for the pre-writing stage
-    parser.add_argument('--max-conv-turn', type=int, default=1,
+    parser.add_argument('--max-conv-turn', type=int, default=2,
                         help='Maximum number of questions in conversational question asking.')
-    parser.add_argument('--max-perspective', type=int, default=1,
+    parser.add_argument('--max-perspective', type=int, default=2,
                         help='Maximum number of perspectives to consider in perspective-guided question asking.')
     parser.add_argument('--search-top-k', type=int, default=3,
                         help='Top k search results to consider for each search query.')

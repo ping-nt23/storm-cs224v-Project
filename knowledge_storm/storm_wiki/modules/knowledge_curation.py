@@ -11,6 +11,7 @@ from .persona_generator import StormPersonaGenerator
 from .storm_dataclass import DialogueTurn, StormInformationTable
 from ...interface import KnowledgeCurationModule, Retriever, Information
 from ...utils import ArticleTextProcessing
+from .graph import MindmapGraph
 
 try:
     from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -35,6 +36,7 @@ class ConvSimulator(dspy.Module):
         max_turn: int,
     ):
         super().__init__()
+        self.graph_processor = MindmapGraph(method="tfidf")
         self.wiki_writer = WikiWriter(engine=question_asker_engine) # Pann: edit
         self.topic_expert = TopicExpert( # Pann : edit
             engine=topic_expert_engine,
@@ -56,13 +58,14 @@ class ConvSimulator(dspy.Module):
         persona: The persona of the Wikipedia writer.
         ground_truth_url: The ground_truth_url will be excluded from search to avoid ground truth leakage in evaluation.
         """
+        print("HELLO PANN")
         dlg_history: List[DialogueTurn] = []
         for _ in range(self.max_turn):
             user_utterance = self.wiki_writer(
                 topic=topic, persona=persona, dialogue_turns=dlg_history
             ).question
             if user_utterance == "":
-                logging.error("Simulated Wikipedia writer utterance is empty.")
+                logging.error("Simulated article writer utterance is empty.")
                 break
             if user_utterance.startswith("Thank you so much for your help!"):
                 break
@@ -76,6 +79,9 @@ class ConvSimulator(dspy.Module):
                 search_results=expert_output.searched_results,
             )
             # Pann: add graph logic here
+            passage = expert_output.answer
+            self.graph_processor.process_passage(passage)
+
             dlg_history.append(dlg_turn)
             callback_handler.on_dialogue_turn_end(dlg_turn=dlg_turn)
 
@@ -126,7 +132,7 @@ class WikiWriter(dspy.Module):
         return dspy.Prediction(question=question)
 
 
-class AskQuestion(dspy.Signature): # Pann: Edit to also have graph. Also edit to not be Wikipedia writer
+class AskQuestion(dspy.Signature): # Pann TODO: Edit to also have graph. Also edit to not be Wikipedia writer
     """You are an experienced Wikipedia writer. You are chatting with an expert to get information for the topic you want to contribute. Ask good questions to get more useful information relevant to the topic.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
     Please only ask a question at a time and don't ask what you have asked before. Your questions should be related to the topic you want to write.
@@ -134,10 +140,11 @@ class AskQuestion(dspy.Signature): # Pann: Edit to also have graph. Also edit to
 
     topic = dspy.InputField(prefix="Topic you want to write: ", format=str)
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
+    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=dict)
     question = dspy.OutputField(format=str)
 
 
-class AskQuestionWithPersona(dspy.Signature): # Pann: Edit to also have graph. Also edit to not be Wikipedia writer
+class AskQuestionWithPersona(dspy.Signature): # Pann TODO: Edit to also have graph. Also edit to not be Wikipedia writer
     """You are an experienced Wikipedia writer and want to edit a specific page. Besides your identity as a Wikipedia writer, you have specific focus when researching the topic.
     Now, you are chatting with an expert to get information. Ask good questions to get more useful information.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
@@ -149,6 +156,7 @@ class AskQuestionWithPersona(dspy.Signature): # Pann: Edit to also have graph. A
         prefix="Your persona besides being a Wikipedia writer: ", format=str
     )
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
+    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=dict)
     question = dspy.OutputField(format=str)
 
 
