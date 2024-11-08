@@ -7,7 +7,7 @@ from knowledge_storm import STORMWikiRunnerArguments, STORMWikiRunner, STORMWiki
 def main(args):
     lm_configs = STORMWikiLMConfigs()
     together_kwargs = {
-        'api_key': "34b2a05629493a7c97b75b43d09aa8fe98649ea0c25c633300ec837e80a0ac0a",
+        'api_key': os.getenv("TOGETHER_API_KEY"),
         'temperature': 1.0,
         'top_p': 0.9,
         "stop": ('\n\n---',)
@@ -32,7 +32,7 @@ def main(args):
         search_top_k=args.search_top_k,
         max_thread_num=args.max_thread_num,
     )
-    rm = BingSearch(bing_search_api_key='4990b0ed4b174f69bd5a304f03e4e029') # replace with Bing APi
+    rm = BingSearch(bing_search_api_key=os.getenv("BING_SEARCH_API_KEY")) # replace with Bing APi
     runner = STORMWikiRunner(engine_args, lm_configs, rm)
 
     topic = 'Recent News about ' + input('Topic: ')
