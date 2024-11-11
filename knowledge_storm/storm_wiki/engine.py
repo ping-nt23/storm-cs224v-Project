@@ -161,7 +161,7 @@ class STORMWikiRunnerArguments:
         metadata={"help": "Top k collected references for each section title."},
     )
     max_thread_num: int = field(
-        default=10,
+        default=1,
         metadata={
             "help": "Maximum number of threads to use. "
             "Consider reducing it if keep getting 'Exceed rate limit' error when calling LM API."

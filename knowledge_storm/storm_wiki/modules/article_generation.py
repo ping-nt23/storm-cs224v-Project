@@ -22,7 +22,7 @@ class StormArticleGenerationModule(ArticleGenerationModule):
         self,
         article_gen_lm=Union[dspy.dsp.LM, dspy.dsp.HFModel],
         retrieve_top_k: int = 5,
-        max_thread_num: int = 10,
+        max_thread_num: int = 1,
     ):
         super().__init__()
         self.retrieve_top_k = retrieve_top_k
