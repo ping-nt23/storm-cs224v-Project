@@ -11,6 +11,7 @@ from .persona_generator import StormPersonaGenerator
 from .storm_dataclass import DialogueTurn, StormInformationTable
 from ...interface import KnowledgeCurationModule, Retriever, Information
 from ...utils import ArticleTextProcessing
+from .graph import MindmapGraph
 
 try:
     from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -43,7 +44,7 @@ class ConvSimulator(dspy.Module):
             retriever=retriever,
         )
         self.max_turn = max_turn
-
+        self.graph_mindmap = {}
     def forward(
         self,
         topic: str,
@@ -75,6 +76,9 @@ class ConvSimulator(dspy.Module):
                 search_queries=expert_output.queries,
                 search_results=expert_output.searched_results,
             )
+            passage = expert_output.answer
+            self.graph_mindmap = self.graph_processor.process_passage(passage, topic)
+            
             dlg_history.append(dlg_turn)
             callback_handler.on_dialogue_turn_end(dlg_turn=dlg_turn)
 
@@ -194,6 +198,7 @@ class TopicExpert(dspy.Module):
         retriever: Retriever,
     ):
         super().__init__()
+        self.graph_processor = MindmapGraph(method="tfidf")
         self.generate_queries = dspy.Predict(QuestionToQuery)
         self.retriever = retriever
         self.answer_question = dspy.Predict(AnswerQuestion)
