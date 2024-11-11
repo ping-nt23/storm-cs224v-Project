@@ -59,7 +59,6 @@ class ConvSimulator(dspy.Module):
         persona: The persona of the recent news article writer.
         ground_truth_url: The ground_truth_url will be excluded from search to avoid ground truth leakage in evaluation.
         """
-        print("HELLO PANN")
         dlg_history: List[DialogueTurn] = []
         for _ in range(self.max_turn):
             user_utterance = self.wiki_writer(
@@ -134,7 +133,9 @@ class WikiWriter(dspy.Module):
 
 
 class AskQuestion(dspy.Signature):
-    """You are an experienced recent news article writer. You are chatting with an expert to get information for the topic you want to contribute. Ask good questions to get more useful information relevant to the topic.
+    """You are an experienced recent news article writer. You are chatting with an expert to get information for the topic you want to write about. Ask good questions to get more useful information relevant to the topic.
+    Do not ask questions about the topic's basic background information. The readers of your news article already knows basic information about your topic.
+    Focus on recent news about the topic.
     You have also drafted a graph mindmap of your information gathering about the topic so far. Ask questions that will ensure balancedness to the graph to not deviate too much into a specific topic or be too broad.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
     Please only ask a question at a time and don't ask what you have asked before. Your questions should be related to the topic you want to write.
@@ -150,6 +151,8 @@ class AskQuestion(dspy.Signature):
 class AskQuestionWithPersona(dspy.Signature):
     """You are an experienced recent news article writer and want to edit a specific page. Besides your identity as a recent news article writer, you have specific focus when researching the topic.
     Now, you are chatting with an expert to get information. Ask good questions to get more useful information.
+    Do not ask questions about the topic's basic background information. The readers of your news article already knows basic information about your topic.
+    Focus on recent news about the topic.
     You have also drafted a graph mindmap of your information gathering about the topic so far. Ask questions that will ensure balancedness to the graph to not deviate too much into a specific topic or be too broad.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
     Please only ask a question at a time and don't ask what you have asked before. Your questions should be related to the topic you want to write.
