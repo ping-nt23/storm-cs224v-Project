@@ -44,6 +44,7 @@ class ConvSimulator(dspy.Module):
             retriever=retriever,
         )
         self.max_turn = max_turn
+        self.graph_processor = MindmapGraph(method="llm")
         self.graph_mindmap = {}
     def forward(
         self,
@@ -198,7 +199,6 @@ class TopicExpert(dspy.Module):
         retriever: Retriever,
     ):
         super().__init__()
-        self.graph_processor = MindmapGraph(method="tfidf")
         self.generate_queries = dspy.Predict(QuestionToQuery)
         self.retriever = retriever
         self.answer_question = dspy.Predict(AnswerQuestion)

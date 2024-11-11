@@ -128,9 +128,9 @@ class MindmapGraph:
         plt.close()
         graph_data = nx.readwrite.json_graph.node_link_data(self.G_summaries, edges="edges")
         # Ensure the folder exists, create it if it doesn't
-        os.makedirs('tfidf', exist_ok=True)
+        os.makedirs('llm', exist_ok=True)
         
-        with open(f'tfidf/graph_data_{topic}.json', 'w') as f:
+        with open(f'llm/graph_data_{topic}.json', 'w') as f:
             json.dump(graph_data, f)
         graph_mindmap = json.dumps(graph_data, indent=2)
         return graph_mindmap
