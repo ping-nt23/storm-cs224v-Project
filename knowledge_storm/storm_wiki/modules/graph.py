@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from pydantic import Field, BaseModel
+import os
 
 class WeightOutput(BaseModel):
     score: float = Field(description="A score from 0 to 1, 0 meaning the topics are not correlated at all and 1 being the topics are tightly correlated")
@@ -111,7 +112,7 @@ class MindmapGraph:
                 related_topics.append({"topic": topic, "weight": weight})
         return related_topics
 
-    def process_passage(self, passage):
+    def process_passage(self, passage, topic):
         print("COUNT IS", self.count)
         topic_summary = self.summarize_passage(passage)
         if topic_summary:
@@ -126,6 +127,14 @@ class MindmapGraph:
         self.count += 1
         plt.close()
         graph_data = nx.readwrite.json_graph.node_link_data(self.G_summaries, edges="edges")
+
+        os.makedirs('tfidf', exist_ok=True)
+        
+        with open(f'tfidf/graph_data_{topic}.json', 'w') as f:
+            json.dump(graph_data, f)
+        graph_mindmap = json.dumps(graph_data, indent=2)
+
+
         graph_mindmap = json.dumps(graph_data, indent=2)
         print('type of', type(graph_mindmap))
         print('graph_mindmap is', graph_mindmap)

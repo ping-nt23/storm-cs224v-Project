@@ -36,7 +36,7 @@ class ConvSimulator(dspy.Module):
         max_turn: int,
     ):
         super().__init__()
-        self.graph_processor = MindmapGraph(method="tfidf")
+        self.graph_processor = MindmapGraph(method='tfidf')
         self.wiki_writer = WikiWriter(engine=question_asker_engine) # Pann: edit
         self.topic_expert = TopicExpert( # Pann : edit
             engine=topic_expert_engine,
@@ -80,7 +80,7 @@ class ConvSimulator(dspy.Module):
             )
             # Pann: add graph logic here
             passage = expert_output.answer
-            self.graph_mindmap = self.graph_processor.process_passage(passage)
+            self.graph_mindmap = self.graph_processor.process_passage(passage, topic)
 
             dlg_history.append(dlg_turn)
             callback_handler.on_dialogue_turn_end(dlg_turn=dlg_turn)
