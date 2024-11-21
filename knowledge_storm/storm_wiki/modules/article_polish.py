@@ -18,6 +18,7 @@ class StormArticlePolishingModule(ArticlePolishingModule):
         self,
         article_gen_lm: Union[dspy.dsp.LM, dspy.dsp.HFModel],
         article_polish_lm: Union[dspy.dsp.LM, dspy.dsp.HFModel],
+        # pann: aritcle_edit_lm: Union[dspy.dsp.LM, dspy.dsp.HFModel],
     ):
         self.article_gen_lm = article_gen_lm
         self.article_polish_lm = article_polish_lm
@@ -26,8 +27,12 @@ class StormArticlePolishingModule(ArticlePolishingModule):
             write_lead_engine=self.article_gen_lm, polish_engine=self.article_polish_lm
         )
 
+        self.edit_page = EditPageModule(
+            edit_engine=self.article_polish_lm
+        )
+
     def polish_article(
-        self, topic: str, draft_article: StormArticle, remove_duplicate: bool = False
+        self, topic: str, draft_article: StormArticle, remove_duplicate: bool = True#pann: False
     ) -> StormArticle:
         """
         Polish article.
@@ -42,8 +47,9 @@ class StormArticlePolishingModule(ArticlePolishingModule):
         polish_result = self.polish_page(
             topic=topic, draft_page=article_text, polish_whole_page=remove_duplicate
         )
-        lead_section = f"# summary\n{polish_result.lead_section}"
-        polished_article = "\n\n".join([lead_section, polish_result.page])
+        #pann
+        # lead_section = f"# summary\n{polish_result.lead_section}"
+        polished_article = polish_result.page#"\n\n".join([lead_section, polish_result.page])
         polished_article_dict = ArticleTextProcessing.parse_article_into_dict(
             polished_article
         )
@@ -51,6 +57,18 @@ class StormArticlePolishingModule(ArticlePolishingModule):
         polished_article.insert_or_create_section(article_dict=polished_article_dict)
         polished_article.post_processing()
         return polished_article
+    
+    def edit_article(
+        self, polished_article
+    ) -> str:
+        print('edit article is called')
+        edit_result = self.edit_page(
+            polished_page=polished_article.to_string()
+        )
+        print('pann edit_result is', edit_result)
+        final_article = edit_result.page
+        print('pann final_article is', final_article, type(final_article))
+        return final_article
 
 
 class WriteLeadSection(dspy.Signature):
@@ -67,9 +85,13 @@ class WriteLeadSection(dspy.Signature):
 
 
 class PolishPage(dspy.Signature):
-    """You are a faithful text editor that is good at finding repeated information in the article and deleting them to make sure there is no repetition in the article. You won't delete any non-repeated part in the article. You will keep the inline citations and article structure (indicated by "#", "##", etc.) appropriately. You will also delete basic background information about the topic, as your readers already know the basic information about the topic. Do your job for the following article."""
-
+    """You are a faithful text editor that is good at finding repeated information in the article and deleting them to make sure there is no repetition in the article. You won't delete any non-repeated part in the article. You will keep the inline citations appropriately and article structure (indicated by "#", "##", etc.). You will also delete basic background information about the topic, as your readers already know the basic information about the topic. Do your job for the following article."""
     draft_page = dspy.InputField(prefix="The draft article:\n", format=str)
+    page = dspy.OutputField(prefix="Your revised article:\n", format=str)
+
+class EditPage(dspy.Signature):
+    """You are an editor. You will delete article structure (indicated by "#", "##", etc.) and you will edit the article to be one coherent article, maintaining the given draft article's structure and message. You will also delete basic background information about the topic, as your readers already know the basic information about the topic. Do your job for the following article. Do your job for the following article."""
+    polished_page = dspy.InputField(prefix="The draft article:\n", format=str)
     page = dspy.OutputField(prefix="Your revised article:\n", format=str)
 
 
@@ -86,6 +108,7 @@ class PolishPageModule(dspy.Module):
         self.polish_page = dspy.Predict(PolishPage)
 
     def forward(self, topic: str, draft_page: str, polish_whole_page: bool = True):
+        print("PANN FORWARD", polish_whole_page)
         # NOTE: Change show_guidelines to false to make the generation more robust to different LM families.
         with dspy.settings.context(lm=self.write_lead_engine, show_guidelines=False):
             lead_section = self.write_lead(
@@ -94,10 +117,28 @@ class PolishPageModule(dspy.Module):
             if "The lead section:" in lead_section:
                 lead_section = lead_section.split("The lead section:")[1].strip()
         if polish_whole_page:
+            print("GOT HERE")
             # NOTE: Change show_guidelines to false to make the generation more robust to different LM families.
             with dspy.settings.context(lm=self.polish_engine, show_guidelines=False):
+                print("PANN POLISHING PAGE")
                 page = self.polish_page(draft_page=draft_page).page
+                print('page', page)
         else:
             page = draft_page
 
         return dspy.Prediction(lead_section=lead_section, page=page)
+
+class EditPageModule(dspy.Module):
+    def __init__(
+        self,
+        edit_engine: Union[dspy.dsp.LM, dspy.dsp.HFModel],
+    ):
+        super().__init__()
+        self.edit_engine = edit_engine
+        self.edit_page = dspy.Predict(EditPage)
+
+    def forward(self, polished_page: str):
+        with dspy.settings.context(lm=self.edit_engine, show_guidelines=False):
+            page = self.edit_page(polished_page=polished_page).page
+            print('edited page', page)
+        return dspy.Prediction(page=page)

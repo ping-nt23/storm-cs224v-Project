@@ -43,7 +43,7 @@ def main(args):
             do_generate_outline=True,
             do_generate_article=True,
             do_polish_article=True,
-            remove_duplicate=False
+            remove_duplicate=True
         )
         runner.post_run()
         runner.summary()

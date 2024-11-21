@@ -294,6 +294,7 @@ class STORMWikiRunner(Engine):
             information_table=information_table,
             article_with_outline=outline,
             callback_handler=callback_handler,
+            graph_mindmap=self.graph_mindmap
         )
         draft_article.dump_article_as_plain_text(
             os.path.join(self.article_output_dir, "storm_gen_article.txt")
@@ -305,18 +306,23 @@ class STORMWikiRunner(Engine):
 
     def run_article_polishing_module(
         self, draft_article: StormArticle, remove_duplicate: bool = False
-    ) -> StormArticle:
+    ) -> str:
 
         polished_article = self.storm_article_polishing_module.polish_article(
             topic=self.topic,
             draft_article=draft_article,
             remove_duplicate=remove_duplicate,
         )
+        print('pann polished_article is', polished_article)
+        final_article = self.storm_article_polishing_module.edit_article(
+            polished_article=polished_article,
+        )
+        print('pann final_article is', final_article)
         FileIOHelper.write_str(
-            polished_article.to_string(),
+            final_article,
             os.path.join(self.article_output_dir, "storm_gen_article_polished.txt"),
         )
-        return polished_article
+        return final_article
 
     def post_run(self):
         """

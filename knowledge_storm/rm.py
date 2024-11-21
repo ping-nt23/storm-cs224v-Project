@@ -89,7 +89,7 @@ class BingSearch(dspy.Retrieve):
         webpage_helper_max_threads=10,
         mkt="en-US",
         language="en",
-        freshness="month",
+        freshness="week",
         **kwargs,
     ):
         """

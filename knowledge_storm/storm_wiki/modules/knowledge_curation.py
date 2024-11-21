@@ -60,30 +60,53 @@ class ConvSimulator(dspy.Module):
         ground_truth_url: The ground_truth_url will be excluded from search to avoid ground truth leakage in evaluation.
         """
         dlg_history: List[DialogueTurn] = []
-        for _ in range(self.max_turn):
-            user_utterance = self.wiki_writer(
-                topic=topic, persona=persona, dialogue_turns=dlg_history, graph_mindmap=self.graph_mindmap
-            ).question
-            if user_utterance == "":
-                logging.error("Simulated article writer utterance is empty.")
-                break
-            if user_utterance.startswith("Thank you so much for your help!"):
-                break
-            expert_output = self.topic_expert(
-                topic=topic, question=user_utterance, ground_truth_url=ground_truth_url
-            )
-            dlg_turn = DialogueTurn(
-                agent_utterance=expert_output.answer,
-                user_utterance=user_utterance,
-                search_queries=expert_output.queries,
-                search_results=expert_output.searched_results,
-            )
-            # Pann: add graph logic here
-            passage = expert_output.answer
-            self.graph_mindmap = self.graph_processor.process_passage(passage)
+        for iter in range(self.max_turn):
+            if iter == 0:
+                def extract_topic(text):
+                    return text.split("Recent News about ")[1].strip()
+                user_utterance = f"What are the most recent and relevant news or controversies about {extract_topic(topic)}?"
+                print('pann init question', user_utterance)
+                expert_output = self.topic_expert(
+                    topic=topic, question=user_utterance, ground_truth_url=ground_truth_url
+                )
+                dlg_turn = DialogueTurn(
+                    agent_utterance=expert_output.answer,
+                    user_utterance=user_utterance,
+                    search_queries=expert_output.queries,
+                    search_results=expert_output.searched_results,
+                )
+                passage = expert_output.answer
+                self.graph_mindmap = self.graph_processor.process_passage(passage)
+                print('pann init response', expert_output.answer)
+                dlg_history.append(dlg_turn)
 
-            dlg_history.append(dlg_turn)
-            callback_handler.on_dialogue_turn_end(dlg_turn=dlg_turn)
+
+
+            else:
+                print('pann dialogue history', dlg_history)
+                user_utterance = self.wiki_writer(
+                    topic=topic, persona=persona, dialogue_turns=dlg_history, graph_mindmap=self.graph_mindmap
+                ).question
+                if user_utterance == "":
+                    logging.error("Simulated article writer utterance is empty.")
+                    break
+                if user_utterance.startswith("Thank you so much for your help!"):
+                    break
+                expert_output = self.topic_expert(
+                    topic=topic, question=user_utterance, ground_truth_url=ground_truth_url
+                )
+                dlg_turn = DialogueTurn(
+                    agent_utterance=expert_output.answer,
+                    user_utterance=user_utterance,
+                    search_queries=expert_output.queries,
+                    search_results=expert_output.searched_results,
+                )
+                # Pann: add graph logic here
+                passage = expert_output.answer
+                self.graph_mindmap = self.graph_processor.process_passage(passage)
+
+                dlg_history.append(dlg_turn)
+                callback_handler.on_dialogue_turn_end(dlg_turn=dlg_turn)
 
         return dspy.Prediction(dlg_history=dlg_history)
 
@@ -120,6 +143,7 @@ class WikiWriter(dspy.Module):
         conv = conv.strip() or "N/A"
         conv = ArticleTextProcessing.limit_word_count_preserve_newline(conv, 2500)
         with dspy.settings.context(lm=self.engine):
+            print('pann conv', conv)
             if persona is not None and len(persona.strip()) > 0:
                 question = self.ask_question_with_persona(
                     topic=topic, persona=persona, conv=conv, graph_mindmap=graph_mindmap
@@ -134,9 +158,9 @@ class WikiWriter(dspy.Module):
 
 class AskQuestion(dspy.Signature):
     """You are an experienced recent news article writer. You are chatting with an expert to get information for the topic you want to write about. Ask good questions to get more useful information relevant to the topic.
-    Do not ask questions about the topic's basic background information. The readers of your news article already knows basic information about your topic.
     Focus on recent news about the topic.
-    You have also drafted a graph mindmap of your information gathering about the topic so far. Ask questions that will ensure balancedness to the graph to not deviate too much into a specific topic or be too broad.
+    Do not ask questions about the topic's basic background information. The readers of your news article already knows basic information about your topic.
+    You have also drafted a graph mindmap of your information gathering about the topic so far. Ask questions that will ensure balancedness to the graph to NOT focus too much into a specific topic.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
     Please only ask a question at a time and don't ask what you have asked before. Your questions should be related to the topic you want to write.
     """
@@ -144,16 +168,15 @@ class AskQuestion(dspy.Signature):
     topic = dspy.InputField(prefix="Topic you want to write: ", format=str)
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
     graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=str)
-    print('AskQuestion', graph_mindmap)
     question = dspy.OutputField(format=str)
 
 
 class AskQuestionWithPersona(dspy.Signature):
     """You are an experienced recent news article writer and want to edit a specific page. Besides your identity as a recent news article writer, you have specific focus when researching the topic.
     Now, you are chatting with an expert to get information. Ask good questions to get more useful information.
-    Do not ask questions about the topic's basic background information. The readers of your news article already knows basic information about your topic.
     Focus on recent news about the topic.
-    You have also drafted a graph mindmap of your information gathering about the topic so far. Ask questions that will ensure balancedness to the graph to not deviate too much into a specific topic or be too broad.
+    Do not ask questions about the topic's basic background information. The readers of your news article already knows basic information about your topic.
+    You have also drafted a graph mindmap of your information gathering about the topic so far. Ask questions that will ensure balancedness to the graph to NOT focus too much into a specific topic.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
     Please only ask a question at a time and don't ask what you have asked before. Your questions should be related to the topic you want to write.
     """
@@ -164,7 +187,6 @@ class AskQuestionWithPersona(dspy.Signature):
     )
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
     graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=str)
-    print('AskQuestionWithPersona', graph_mindmap)
     question = dspy.OutputField(format=str)
 
 
@@ -231,6 +253,7 @@ class TopicExpert(dspy.Module):
             searched_results: List[Information] = self.retriever.retrieve(
                 list(set(queries)), exclude_urls=[ground_truth_url]
             )
+            print('pann len(searched_results) is', len(searched_results))
             if len(searched_results) > 0:
                 # Evaluate: Simplify this part by directly using the top 1 snippet.
                 info = ""

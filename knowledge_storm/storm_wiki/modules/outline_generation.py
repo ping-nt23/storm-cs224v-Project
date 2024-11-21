@@ -129,7 +129,7 @@ class WriteOutline(dspy.Module):
 
 
 class WritePageOutline(dspy.Signature): # Pann: edit the format of the article
-    """Write an outline for a recent news article. Do not include background information or introduction. Focus primarily on recent events, controversies, or news about the topic.
+    """Write an outline for a recent news article. Do not include background information, introduction, or summary. Focus primarily on recent events, controversies, or news about the topic.
     Here is the format of your writing:
     1. Use '#' Title to indicate section title, '##' Title to indicate subsection title, '###' Title to indicate subsubsection title, and so on.
     2. Do not include other information.
@@ -156,8 +156,9 @@ class NaiveOutlineGen(dspy.Module):
 class WritePageOutlineFromConv(dspy.Signature): # Pann: edit the format of the article
     """Improve an outline for a news article. You already have a draft outline that covers the general information.
     Now you want to improve it based on the information learned from an information-seeking conversation to make it more informative.
-    Do not indluce background information or introduction.
+    Do not incluce background information or introduction.
     You also want to improve the draft outline's balancedness based on the mindmap generated about the topic. Ensure to use the mindmap and its edge weights to include only the most relevant information and related the information together. Exclude any irrelevant data according to the graph mindmap.
+    Also use the given mindmap to make further connections between the various connected nodes and connected components when generating the article outline.
     Here is the format of your writing:
     1. Use '#' Title to indicate section title, '##' Title to indicate subsection title, '###' Title to indicate subsubsection title, and so on.
     2. Do not include other information.
