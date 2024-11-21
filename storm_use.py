@@ -15,8 +15,8 @@ def main(args):
     # STORM is a LM system so different components can be powered by different models to reach a good balance between cost and quality.
     # For a good practice, choose a cheaper/faster model for `conv_simulator_lm` which is used to split queries, synthesize answers in the conversation.
     # Choose a more powerful model for `article_gen_lm` to generate verifiable text with citations.
-    llama_8B = TogetherClient(model='meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', max_tokens=500, **together_kwargs)
-    # llama_70B = TogetherClient(model='gpt-4o', max_tokens=3000, **together_kwargs)
+    llama_8B = TogetherClient(model='meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', max_tokens=2000, **together_kwargs)
+    llama_70B = TogetherClient(model='meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', max_tokens=3000, **together_kwargs)
     lm_configs.set_conv_simulator_lm(llama_8B)
     lm_configs.set_question_asker_lm(llama_8B)
     lm_configs.set_outline_gen_lm(llama_8B)

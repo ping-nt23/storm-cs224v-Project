@@ -157,19 +157,19 @@ class STORMWikiRunnerArguments:
         metadata={"help": "Output directory for the results."},
     )
     max_conv_turn: int = field(
-        default=3,
+        default=6,
         metadata={
             "help": "Maximum number of questions in conversational question asking."
         },
     )
     max_perspective: int = field(
-        default=3,
+        default=4,
         metadata={
             "help": "Maximum number of perspectives to consider in perspective-guided question asking."
         },
     )
     max_search_queries_per_turn: int = field(
-        default=3,
+        default=5,
         metadata={"help": "Maximum number of search queries to consider in each turn."},
     )
     disable_perspective: bool = field(
@@ -177,11 +177,11 @@ class STORMWikiRunnerArguments:
         metadata={"help": "If True, disable perspective-guided question asking."},
     )
     search_top_k: int = field(
-        default=3,
+        default=4,
         metadata={"help": "Top k search results to consider for each search query."},
     )
     retrieve_top_k: int = field(
-        default=3,
+        default=4,
         metadata={"help": "Top k collected references for each section title."},
     )
     max_thread_num: int = field(

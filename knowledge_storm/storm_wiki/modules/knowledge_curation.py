@@ -36,7 +36,7 @@ class ConvSimulator(dspy.Module):
         max_turn: int,
     ):
         super().__init__()
-        self.graph_processor = MindmapGraph(method="tfidf")
+        self.graph_processor = MindmapGraph(method="llm")
         self.wiki_writer = WikiWriter(engine=question_asker_engine) # Pann: edit
         self.topic_expert = TopicExpert( # Pann : edit
             engine=topic_expert_engine,
