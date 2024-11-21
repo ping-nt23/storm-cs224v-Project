@@ -64,7 +64,7 @@ class ConvSimulator(dspy.Module):
             if iter == 0:
                 def extract_topic(text):
                     return text.split("Recent News about ")[1].strip()
-                user_utterance = f"What are the most recent and relevant news or controversies about {extract_topic(topic)}?"
+                user_utterance = f"What are the most recent and relevant news about {extract_topic(topic)}?"
                 print('pann init question', user_utterance)
                 expert_output = self.topic_expert(
                     topic=topic, question=user_utterance, ground_truth_url=ground_truth_url

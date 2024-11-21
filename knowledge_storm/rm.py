@@ -155,10 +155,11 @@ class BingSearch(dspy.Retrieve):
 
         for query in queries:
             try:
+                print('pann trying query bing')
                 results = requests.get(
                     self.endpoint, headers=headers, params={**self.params, "q": query}
                 ).json()
-
+                print('pann bing resultsis', results)
                 for d in results["webPages"]["value"]:
                     if self.is_valid_source(d["url"]) and d["url"] not in exclude_urls:
                         url_to_results[d["url"]] = {
