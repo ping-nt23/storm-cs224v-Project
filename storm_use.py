@@ -22,10 +22,7 @@ def main(args):
     lm_configs.set_outline_gen_lm(llama_8B)
     lm_configs.set_article_gen_lm(llama_8B)
     lm_configs.set_article_polish_lm(llama_8B)
-    # # Check out the STORMWikiRunnerArguments class for more configurations.
     engine_args = STORMWikiRunnerArguments(
-        # max_search_queries=args.max_search_queries,
-        # max_search_thread=args.max_search_thread,
         output_dir=args.output_dir,
         max_conv_turn=args.max_conv_turn,
         max_perspective=args.max_perspective,
@@ -81,24 +78,5 @@ if __name__ == '__main__':
                         help='Top k collected references for each section title.')
     parser.add_argument('--remove-duplicate', action='store_true',
                         help='If True, remove duplicate content from the article.')
-    
-    # parser.add_argument(
-    #     '--max_search_queries',
-    #     type=int,
-    #     default=1,
-    #     help='Maximum number of search queries to consider for each question.'
-    # )
+
     main(parser.parse_args())
-
-# TogetherClient(dspy.HFModel):
-#     """A wrapper class for dspy.Together."""
-
-#     def __init__(
-#         self,
-#         model,
-#         api_key: Optional[str] = None,
-#         apply_tokenizer_chat_template=False,
-#         hf_tokenizer_name=None,
-#         model_type: Literal["chat", "text"] = "chat",
-#         **kwargs,
-#     ):

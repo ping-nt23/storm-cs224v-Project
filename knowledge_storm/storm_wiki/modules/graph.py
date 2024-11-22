@@ -35,9 +35,6 @@ class MindmapGraph:
         # Method for weight computation
         self.method = method
 
-        # TODO: Pann Remove , use for debug graphs
-        self.count = 0
-
     def refit_vectorizer(self):
         if self.topics_list:
             self.vectorizer.fit(self.topics_list)
@@ -112,7 +109,6 @@ class MindmapGraph:
         return related_topics
 
     def process_passage(self, passage):
-        print("COUNT IS", self.count)
         topic_summary = self.summarize_passage(passage)
         if topic_summary:
             connections = self.relate_passage_to_topics(topic_summary)
@@ -122,25 +118,7 @@ class MindmapGraph:
         nx.draw(self.G, pos, with_labels=True, node_color="lightblue", edge_color="gray", font_size=10)
         edge_labels = nx.get_edge_attributes(self.G, 'weight')
         nx.draw_networkx_edge_labels(self.G, pos, edge_labels=edge_labels, font_color="red")
-        plt.savefig(f"graph-{self.count}.png")
-        self.count += 1
         plt.close()
         graph_data = nx.readwrite.json_graph.node_link_data(self.G_summaries, edges="edges")
         graph_mindmap = json.dumps(graph_data, indent=2)
-        print('type of', type(graph_mindmap))
-        print('graph_mindmap is', graph_mindmap)
         return graph_mindmap
-
-
-    # PANN: TODO REMOVE
-    def generate_article(self):
-        graph_data = nx.readwrite.json_graph.node_link_data(self.G, edges="edges")
-        graph_json = json.dumps(graph_data)
-        article_response = self.together.chat.completions.create(
-            messages=[
-                {"role": "system", "content": "Use the provided mindmap JSON to generate a coherent article."},
-                {"role": "user", "content": graph_json},
-            ],
-            model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
-        )
-        return article_response.choices[0].message.content.strip() if article_response.choices else "Error generating article."

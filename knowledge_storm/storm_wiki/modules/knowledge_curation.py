@@ -37,8 +37,8 @@ class ConvSimulator(dspy.Module):
     ):
         super().__init__()
         self.graph_processor = MindmapGraph(method="tfidf")
-        self.wiki_writer = WikiWriter(engine=question_asker_engine) # Pann: edit
-        self.topic_expert = TopicExpert( # Pann : edit
+        self.wiki_writer = WikiWriter(engine=question_asker_engine)
+        self.topic_expert = TopicExpert(
             engine=topic_expert_engine,
             max_search_queries=max_search_queries_per_turn,
             search_top_k=search_top_k,
@@ -64,8 +64,7 @@ class ConvSimulator(dspy.Module):
             if iter == 0:
                 def extract_topic(text):
                     return text.split("Recent News about ")[1].strip()
-                user_utterance = f"What are the most recent and relevant news about {extract_topic(topic)}?"
-                print('pann init question', user_utterance)
+                user_utterance = f"What are the most recent and relevant news or controversies about {extract_topic(topic)}?"
                 expert_output = self.topic_expert(
                     topic=topic, question=user_utterance, ground_truth_url=ground_truth_url
                 )
@@ -77,13 +76,11 @@ class ConvSimulator(dspy.Module):
                 )
                 passage = expert_output.answer
                 self.graph_mindmap = self.graph_processor.process_passage(passage)
-                print('pann init response', expert_output.answer)
                 dlg_history.append(dlg_turn)
 
 
 
             else:
-                print('pann dialogue history', dlg_history)
                 user_utterance = self.wiki_writer(
                     topic=topic, persona=persona, dialogue_turns=dlg_history, graph_mindmap=self.graph_mindmap
                 ).question
@@ -101,7 +98,6 @@ class ConvSimulator(dspy.Module):
                     search_queries=expert_output.queries,
                     search_results=expert_output.searched_results,
                 )
-                # Pann: add graph logic here
                 passage = expert_output.answer
                 self.graph_mindmap = self.graph_processor.process_passage(passage)
 
@@ -143,7 +139,6 @@ class WikiWriter(dspy.Module):
         conv = conv.strip() or "N/A"
         conv = ArticleTextProcessing.limit_word_count_preserve_newline(conv, 2500)
         with dspy.settings.context(lm=self.engine):
-            print('pann conv', conv)
             if persona is not None and len(persona.strip()) > 0:
                 question = self.ask_question_with_persona(
                     topic=topic, persona=persona, conv=conv, graph_mindmap=graph_mindmap
@@ -152,7 +147,6 @@ class WikiWriter(dspy.Module):
                 question = self.ask_question(
                     topic=topic, persona=persona, conv=conv, graph_mindmap=graph_mindmap
                 ).question
-        print('pann question', question)
         return dspy.Prediction(question=question)
 
 
@@ -253,7 +247,6 @@ class TopicExpert(dspy.Module):
             searched_results: List[Information] = self.retriever.retrieve(
                 list(set(queries)), exclude_urls=[ground_truth_url]
             )
-            print('pann len(searched_results) is', len(searched_results))
             if len(searched_results) > 0:
                 # Evaluate: Simplify this part by directly using the top 1 snippet.
                 info = ""

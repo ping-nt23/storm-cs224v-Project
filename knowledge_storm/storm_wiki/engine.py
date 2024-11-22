@@ -45,7 +45,6 @@ class STORMWikiLMConfigs(LMConfigs):
         temperature: Optional[float] = 1.0,
         top_p: Optional[float] = 0.9,
     ):
-        print("HI")
         """Legacy: Corresponding to the original setup in the NAACL'24 paper."""    
         if lm_type and lm_type == "openai":
             openai_kwargs = {
@@ -313,11 +312,9 @@ class STORMWikiRunner(Engine):
             draft_article=draft_article,
             remove_duplicate=remove_duplicate,
         )
-        print('pann polished_article is', polished_article)
         final_article = self.storm_article_polishing_module.edit_article(
             polished_article=polished_article,
         )
-        print('pann final_article is', final_article)
         FileIOHelper.write_str(
             final_article,
             os.path.join(self.article_output_dir, "storm_gen_article_polished.txt"),

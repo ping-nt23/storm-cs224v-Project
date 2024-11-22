@@ -45,7 +45,7 @@ def get_wiki_page_title_and_toc(url):
     return main_title, toc.strip()
 
 
-class FindRelatedTopic(dspy.Signature): # Pann: edit not to be Wikipedia
+class FindRelatedTopic(dspy.Signature):
     """I'm writing a news article about a recent event related to the topic mentioned below. Please identify and recommend some relevant news sources or articles that discuss recent developments surrounding this topic. I'm looking for examples that provide insights into key issues, controversies, or impactful updates associated with this topic.
     Please list the urls in separate lines."""
 
@@ -53,7 +53,7 @@ class FindRelatedTopic(dspy.Signature): # Pann: edit not to be Wikipedia
     related_topics = dspy.OutputField(format=str)
 
 
-class GenPersona(dspy.Signature): # Pann: edit not to be Wikipedia
+class GenPersona(dspy.Signature):
     """You need to select a group of journalists or commentators who will contribute to a recent news piece on the topic. Each of them represents a different perspective, role, or affiliation related to this topic. You can use recent news articles about related topics for inspiration. For each contributor, add a description of what they will focus on.
     Give your answer in the following format: 1. short summary of contributor 1: description\n2. short summary of contributor 2: description\n...
     """
@@ -65,7 +65,7 @@ class GenPersona(dspy.Signature): # Pann: edit not to be Wikipedia
     personas = dspy.OutputField(format=str)
 
 
-class CreateWriterWithPersona(dspy.Module): # Pann: edit not to be Wikipedia
+class CreateWriterWithPersona(dspy.Module):
     """Discover different perspectives on the topic by reviewing recent news articles about related subjects."""
 
     def __init__(self, engine: Union[dspy.dsp.LM, dspy.dsp.HFModel]):

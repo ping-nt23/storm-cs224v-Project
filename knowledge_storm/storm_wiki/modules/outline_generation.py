@@ -128,7 +128,7 @@ class WriteOutline(dspy.Module):
         return dspy.Prediction(outline=outline, old_outline=old_outline)
 
 
-class WritePageOutline(dspy.Signature): # Pann: edit the format of the article
+class WritePageOutline(dspy.Signature):
     """Write an outline for a recent news article. Do not include background information, introduction, or summary. Focus primarily on recent events, controversies, or news about the topic.
     Here is the format of your writing:
     1. Use '#' Title to indicate section title, '##' Title to indicate subsection title, '###' Title to indicate subsubsection title, and so on.
@@ -153,7 +153,7 @@ class NaiveOutlineGen(dspy.Module):
         return dspy.Prediction(outline=outline)
 
 
-class WritePageOutlineFromConv(dspy.Signature): # Pann: edit the format of the article
+class WritePageOutlineFromConv(dspy.Signature):
     """Improve an outline for a news article. You already have a draft outline that covers the general information.
     Now you want to improve it based on the information learned from an information-seeking conversation to make it more informative.
     Do not incluce background information or introduction.
