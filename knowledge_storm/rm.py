@@ -90,6 +90,7 @@ class BingSearch(dspy.Retrieve):
         mkt="en-US",
         language="en",
         freshness="week",
+        safeSearch = "Off",
         **kwargs,
     ):
         """
@@ -110,7 +111,7 @@ class BingSearch(dspy.Retrieve):
         else:
             self.bing_api_key = os.environ["BING_SEARCH_API_KEY"]
         self.endpoint = "https://api.bing.microsoft.com/v7.0/search"
-        self.params = {"freshness": freshness, "mkt": mkt, "setLang": language, "count": k, **kwargs}
+        self.params = {"freshness": freshness, "safeSearch": safeSearch, "mkt": mkt, "setLang": language, "count": k, **kwargs}
         self.webpage_helper = WebPageHelper(
             min_char_count=min_char_count,
             snippet_chunk_size=snippet_chunk_size,
