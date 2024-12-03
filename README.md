@@ -2,6 +2,25 @@
   <img src="assets/logo.svg" style="width: 25%; height: auto;">
 </p>
 
+# CS 224V Project: STORMReport by Pann Sripitak and Nattakit Tankongchamruskul
+
+**Instructions to Run**: 
+
+1. Follow the Installation instructions for STORM (shown below)
+2. Obtain an Azure API Key for Bing Search and a Together AI key. Run the following in the command line:
+
+```shell
+export TOGETHER_API_KEY=[Together AI API Key]
+export BING_SEARCH_API_KEY=[Bing Search API Key]
+```
+3. Run storm_use.py using the following command
+```shell
+python storm_use.py --output-dir "./results/debug" --do-research --do-generate-outline --do-generate-article --max-thread-num 1
+```
+ Feel free to change any parameters in the file or in the command line.
+
+4. When prompted, insert the input query. The article will then be generated!
+
 # STORM: Synthesis of Topic Outlines through Retrieval and Multi-perspective Question Asking
 
 <p align="center">
