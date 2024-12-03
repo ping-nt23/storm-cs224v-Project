@@ -12,6 +12,7 @@ from dsp.modules.hf import openai_to_hf
 from dsp.modules.hf_client import send_hftgi_request_v01_wrapped
 from openai import OpenAI
 from transformers import AutoTokenizer
+import time
 
 try:
     from anthropic import RateLimitError
@@ -798,7 +799,7 @@ class TogetherClient(dspy.HFModel):
             }
 
         headers = {"Authorization": f"Bearer {self.api_key}"}
-
+        time.sleep(1)
         with self.session.post(self.api_base, headers=headers, json=body) as resp:
             resp_json = resp.json()
             # Log the token usage from the Together API response.

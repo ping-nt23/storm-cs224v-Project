@@ -46,7 +46,7 @@ def get_wiki_page_title_and_toc(url):
 
 
 class FindRelatedTopic(dspy.Signature):
-    """I'm writing a Wikipedia page for a topic mentioned below. Please identify and recommend some Wikipedia pages on closely related subjects. I'm looking for examples that provide insights into interesting aspects commonly associated with this topic, or examples that help me understand the typical content and structure included in Wikipedia pages for similar topics.
+    """I'm writing a news article about a recent event related to the topic mentioned below. Please identify and recommend some relevant news sources or articles that discuss recent developments surrounding this topic. I'm looking for examples that provide insights into key issues, controversies, or impactful updates associated with this topic.
     Please list the urls in separate lines."""
 
     topic = dspy.InputField(prefix="Topic of interest:", format=str)
@@ -54,8 +54,8 @@ class FindRelatedTopic(dspy.Signature):
 
 
 class GenPersona(dspy.Signature):
-    """You need to select a group of Wikipedia editors who will work together to create a comprehensive article on the topic. Each of them represents a different perspective, role, or affiliation related to this topic. You can use other Wikipedia pages of related topics for inspiration. For each editor, add a description of what they will focus on.
-    Give your answer in the following format: 1. short summary of editor 1: description\n2. short summary of editor 2: description\n...
+    """You need to select a group of journalists or commentators who will contribute to a recent news piece on the topic. Each of them represents a different perspective, role, or affiliation related to this topic. You can use recent news articles about related topics for inspiration. For each contributor, add a description of what they will focus on.
+    Give your answer in the following format: 1. short summary of contributor 1: description\n2. short summary of contributor 2: description\n...
     """
 
     topic = dspy.InputField(prefix="Topic of interest:", format=str)
@@ -66,7 +66,7 @@ class GenPersona(dspy.Signature):
 
 
 class CreateWriterWithPersona(dspy.Module):
-    """Discover different perspectives of researching the topic by reading Wikipedia pages of related topics."""
+    """Discover different perspectives on the topic by reviewing recent news articles about related subjects."""
 
     def __init__(self, engine: Union[dspy.dsp.LM, dspy.dsp.HFModel]):
         super().__init__()

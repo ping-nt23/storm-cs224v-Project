@@ -14,7 +14,7 @@ from .modules.outline_generation import StormOutlineGenerationModule
 from .modules.persona_generator import StormPersonaGenerator
 from .modules.storm_dataclass import StormInformationTable, StormArticle
 from ..interface import Engine, LMConfigs, Retriever
-from ..lm import OpenAIModel, AzureOpenAIModel
+from ..lm import OpenAIModel, AzureOpenAIModel, TogetherClient
 from ..utils import FileIOHelper, makeStringRed, truncate_filename
 
 
@@ -39,29 +39,21 @@ class STORMWikiLMConfigs(LMConfigs):
         self,
         openai_api_key: str,
         azure_api_key: str,
-        openai_type: Literal["openai", "azure"],
+        lm_type: Literal["openai", "azure", "together"],
         api_base: Optional[str] = None,
         api_version: Optional[str] = None,
         temperature: Optional[float] = 1.0,
         top_p: Optional[float] = 0.9,
     ):
-        """Legacy: Corresponding to the original setup in the NAACL'24 paper."""
-        azure_kwargs = {
-            "api_key": azure_api_key,
-            "temperature": temperature,
-            "top_p": top_p,
-            "api_base": api_base,
-            "api_version": api_version,
-        }
-
-        openai_kwargs = {
-            "api_key": openai_api_key,
-            "api_provider": "openai",
-            "temperature": temperature,
-            "top_p": top_p,
-            "api_base": None,
-        }
-        if openai_type and openai_type == "openai":
+        """Legacy: Corresponding to the original setup in the NAACL'24 paper."""    
+        if lm_type and lm_type == "openai":
+            openai_kwargs = {
+                "api_key": openai_api_key,
+                "api_provider": "openai",
+                "temperature": temperature,
+                "top_p": top_p,
+                "api_base": None,
+            }
             self.conv_simulator_lm = OpenAIModel(
                 model="gpt-4o-mini-2024-07-18", max_tokens=500, **openai_kwargs
             )
@@ -78,7 +70,14 @@ class STORMWikiLMConfigs(LMConfigs):
             self.article_polish_lm = OpenAIModel(
                 model="gpt-4o-2024-05-13", max_tokens=4000, **openai_kwargs
             )
-        elif openai_type and openai_type == "azure":
+        elif lm_type and lm_type == "azure":
+            azure_kwargs = {
+                "api_key": azure_api_key,
+                "temperature": temperature,
+                "top_p": top_p,
+                "api_base": api_base,
+                "api_version": api_version,
+            }
             self.conv_simulator_lm = OpenAIModel(
                 model="gpt-4o-mini-2024-07-18", max_tokens=500, **openai_kwargs
             )
@@ -104,6 +103,30 @@ class STORMWikiLMConfigs(LMConfigs):
                 **azure_kwargs,
                 model_type="chat",
             )
+        # elif lm_type and lm_type == "together":
+        #     together_kwargs = {
+        #         "api_key": os.getenv("TOGETHER_API_KEY"),
+        #         "temperature": temperature,
+        #         "top_p": top_p,
+        #     }
+        #     self.question_answering_lm = TogetherClient(
+        #         model="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+        #         max_tokens=1000,
+        #         model_type="chat",
+        #         **together_kwargs,
+        #     )
+        #     self.discourse_manage_lm = TogetherClient(
+        #         model="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+        #         max_tokens=500,
+        #         model_type="chat",
+        #         **together_kwargs,
+        #     )
+        #     self.utterance_polishing_lm = TogetherClient(
+        #         model="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+        #         max_tokens=2000,
+        #         model_type="chat",
+        #         **together_kwargs,
+        #     )
         else:
             logging.warning(
                 "No valid OpenAI API provider is provided. Cannot use default LLM configurations."
@@ -161,7 +184,7 @@ class STORMWikiRunnerArguments:
         metadata={"help": "Top k collected references for each section title."},
     )
     max_thread_num: int = field(
-        default=10,
+        default=1,
         metadata={
             "help": "Maximum number of threads to use. "
             "Consider reducing it if keep getting 'Exceed rate limit' error when calling LM API."
@@ -209,13 +232,15 @@ class STORMWikiRunner(Engine):
         self.lm_configs.init_check()
         self.apply_decorators()
 
+        self.graph_mindmap = {}
+
     def run_knowledge_curation_module(
         self,
         ground_truth_url: str = "None",
         callback_handler: BaseCallbackHandler = None,
     ) -> StormInformationTable:
 
-        information_table, conversation_log = (
+        information_table, conversation_log, self.graph_mindmap = (
             self.storm_knowledge_curation_module.research(
                 topic=self.topic,
                 ground_truth_url=ground_truth_url,
@@ -240,10 +265,11 @@ class STORMWikiRunner(Engine):
         information_table: StormInformationTable,
         callback_handler: BaseCallbackHandler = None,
     ) -> StormArticle:
-
+        print("mindmap to generate is", self.graph_mindmap)
         outline, draft_outline = self.storm_outline_generation_module.generate_outline(
             topic=self.topic,
             information_table=information_table,
+            graph_mindmap=self.graph_mindmap,
             return_draft_outline=True,
             callback_handler=callback_handler,
         )
@@ -267,6 +293,7 @@ class STORMWikiRunner(Engine):
             information_table=information_table,
             article_with_outline=outline,
             callback_handler=callback_handler,
+            graph_mindmap=self.graph_mindmap
         )
         draft_article.dump_article_as_plain_text(
             os.path.join(self.article_output_dir, "storm_gen_article.txt")
@@ -278,18 +305,21 @@ class STORMWikiRunner(Engine):
 
     def run_article_polishing_module(
         self, draft_article: StormArticle, remove_duplicate: bool = False
-    ) -> StormArticle:
+    ) -> str:
 
         polished_article = self.storm_article_polishing_module.polish_article(
             topic=self.topic,
             draft_article=draft_article,
             remove_duplicate=remove_duplicate,
         )
+        final_article = self.storm_article_polishing_module.edit_article(
+            polished_article=polished_article,
+        )
         FileIOHelper.write_str(
-            polished_article.to_string(),
+            final_article,
             os.path.join(self.article_output_dir, "storm_gen_article_polished.txt"),
         )
-        return polished_article
+        return final_article
 
     def post_run(self):
         """

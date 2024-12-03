@@ -11,6 +11,7 @@ from .persona_generator import StormPersonaGenerator
 from .storm_dataclass import DialogueTurn, StormInformationTable
 from ...interface import KnowledgeCurationModule, Retriever, Information
 from ...utils import ArticleTextProcessing
+from .graph import MindmapGraph
 
 try:
     from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -23,7 +24,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 class ConvSimulator(dspy.Module):
-    """Simulate a conversation between a Wikipedia writer with specific persona and an expert."""
+    """Simulate a conversation between a recent news article writer with specific persona and an expert."""
 
     def __init__(
         self,
@@ -35,6 +36,7 @@ class ConvSimulator(dspy.Module):
         max_turn: int,
     ):
         super().__init__()
+        self.graph_processor = MindmapGraph(method="tfidf")
         self.wiki_writer = WikiWriter(engine=question_asker_engine)
         self.topic_expert = TopicExpert(
             engine=topic_expert_engine,
@@ -43,6 +45,7 @@ class ConvSimulator(dspy.Module):
             retriever=retriever,
         )
         self.max_turn = max_turn
+        self.graph_mindmap = {}
 
     def forward(
         self,
@@ -53,30 +56,53 @@ class ConvSimulator(dspy.Module):
     ):
         """
         topic: The topic to research.
-        persona: The persona of the Wikipedia writer.
+        persona: The persona of the recent news article writer.
         ground_truth_url: The ground_truth_url will be excluded from search to avoid ground truth leakage in evaluation.
         """
         dlg_history: List[DialogueTurn] = []
-        for _ in range(self.max_turn):
-            user_utterance = self.wiki_writer(
-                topic=topic, persona=persona, dialogue_turns=dlg_history
-            ).question
-            if user_utterance == "":
-                logging.error("Simulated Wikipedia writer utterance is empty.")
-                break
-            if user_utterance.startswith("Thank you so much for your help!"):
-                break
-            expert_output = self.topic_expert(
-                topic=topic, question=user_utterance, ground_truth_url=ground_truth_url
-            )
-            dlg_turn = DialogueTurn(
-                agent_utterance=expert_output.answer,
-                user_utterance=user_utterance,
-                search_queries=expert_output.queries,
-                search_results=expert_output.searched_results,
-            )
-            dlg_history.append(dlg_turn)
-            callback_handler.on_dialogue_turn_end(dlg_turn=dlg_turn)
+        for iter in range(self.max_turn):
+            if iter == 0:
+                def extract_topic(text):
+                    return text.split("Recent News about ")[1].strip()
+                user_utterance = f"What are the most recent and relevant news or controversies about {extract_topic(topic)}?"
+                expert_output = self.topic_expert(
+                    topic=topic, question=user_utterance, ground_truth_url=ground_truth_url
+                )
+                dlg_turn = DialogueTurn(
+                    agent_utterance=expert_output.answer,
+                    user_utterance=user_utterance,
+                    search_queries=expert_output.queries,
+                    search_results=expert_output.searched_results,
+                )
+                passage = expert_output.answer
+                self.graph_mindmap = self.graph_processor.process_passage(passage)
+                dlg_history.append(dlg_turn)
+
+
+
+            else:
+                user_utterance = self.wiki_writer(
+                    topic=topic, persona=persona, dialogue_turns=dlg_history, graph_mindmap=self.graph_mindmap
+                ).question
+                if user_utterance == "":
+                    logging.error("Simulated article writer utterance is empty.")
+                    break
+                if user_utterance.startswith("Thank you so much for your help!"):
+                    break
+                expert_output = self.topic_expert(
+                    topic=topic, question=user_utterance, ground_truth_url=ground_truth_url
+                )
+                dlg_turn = DialogueTurn(
+                    agent_utterance=expert_output.answer,
+                    user_utterance=user_utterance,
+                    search_queries=expert_output.queries,
+                    search_results=expert_output.searched_results,
+                )
+                passage = expert_output.answer
+                self.graph_mindmap = self.graph_processor.process_passage(passage)
+
+                dlg_history.append(dlg_turn)
+                callback_handler.on_dialogue_turn_end(dlg_turn=dlg_turn)
 
         return dspy.Prediction(dlg_history=dlg_history)
 
@@ -97,6 +123,7 @@ class WikiWriter(dspy.Module):
         topic: str,
         persona: str,
         dialogue_turns: List[DialogueTurn],
+        graph_mindmap: str,
         draft_page=None,
     ):
         conv = []
@@ -111,43 +138,49 @@ class WikiWriter(dspy.Module):
         conv = "\n".join(conv)
         conv = conv.strip() or "N/A"
         conv = ArticleTextProcessing.limit_word_count_preserve_newline(conv, 2500)
-
         with dspy.settings.context(lm=self.engine):
             if persona is not None and len(persona.strip()) > 0:
                 question = self.ask_question_with_persona(
-                    topic=topic, persona=persona, conv=conv
+                    topic=topic, persona=persona, conv=conv, graph_mindmap=graph_mindmap
                 ).question
             else:
                 question = self.ask_question(
-                    topic=topic, persona=persona, conv=conv
+                    topic=topic, persona=persona, conv=conv, graph_mindmap=graph_mindmap
                 ).question
-
         return dspy.Prediction(question=question)
 
 
 class AskQuestion(dspy.Signature):
-    """You are an experienced Wikipedia writer. You are chatting with an expert to get information for the topic you want to contribute. Ask good questions to get more useful information relevant to the topic.
+    """You are an experienced recent news article writer. You are chatting with an expert to get information for the topic you want to write about. Ask good questions to get more useful information relevant to the topic.
+    Focus on recent news about the topic.
+    Do not ask questions about the topic's basic background information. The readers of your news article already knows basic information about your topic.
+    You have also drafted a graph mindmap of your information gathering about the topic so far. Ask questions that will ensure balancedness to the graph to NOT focus too much into a specific topic.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
     Please only ask a question at a time and don't ask what you have asked before. Your questions should be related to the topic you want to write.
     """
 
     topic = dspy.InputField(prefix="Topic you want to write: ", format=str)
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
+    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=str)
     question = dspy.OutputField(format=str)
 
 
 class AskQuestionWithPersona(dspy.Signature):
-    """You are an experienced Wikipedia writer and want to edit a specific page. Besides your identity as a Wikipedia writer, you have specific focus when researching the topic.
+    """You are an experienced recent news article writer and want to edit a specific page. Besides your identity as a recent news article writer, you have specific focus when researching the topic.
     Now, you are chatting with an expert to get information. Ask good questions to get more useful information.
+    Focus on recent news about the topic.
+    Do not ask questions about the topic's basic background information. The readers of your news article already knows basic information about your topic.
+    You have also drafted a graph mindmap of your information gathering about the topic so far. Ask questions that will ensure balancedness to the graph to NOT focus too much into a specific topic.
     When you have no more question to ask, say "Thank you so much for your help!" to end the conversation.
     Please only ask a question at a time and don't ask what you have asked before. Your questions should be related to the topic you want to write.
     """
 
     topic = dspy.InputField(prefix="Topic you want to write: ", format=str)
     persona = dspy.InputField(
-        prefix="Your persona besides being a Wikipedia writer: ", format=str
+        prefix="Your persona besides being a recent news article writer: ", format=str
     )
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
+    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=str)
     question = dspy.OutputField(format=str)
 
 
@@ -165,7 +198,7 @@ class QuestionToQuery(dspy.Signature):
 
 
 class AnswerQuestion(dspy.Signature):
-    """You are an expert who can use information effectively. You are chatting with a Wikipedia writer who wants to write a Wikipedia page on topic you know. You have gathered the related information and will now use the information to form a response.
+    """You are an expert who can use information effectively. You are chatting with a recent news article writer who wants to write a recent news article page on topic you know. You have gathered the related information and will now use the information to form a response.
     Make your response as informative as possible, ensuring that every sentence is supported by the gathered information. If the [gathered information] is not directly related to the [topic] or [question], provide the most relevant answer based on the available information. If no appropriate answer can be formulated, respond with, “I cannot answer this question based on the available information,” and explain any limitations or gaps.
     """
 
@@ -352,7 +385,7 @@ class StormKnowledgeCurationModule(KnowledgeCurationModule):
         max_perspective: int = 0,
         disable_perspective: bool = True,
         return_conversation_log=False,
-    ) -> Union[StormInformationTable, Tuple[StormInformationTable, Dict]]:
+    ) -> Union[StormInformationTable, Tuple[StormInformationTable, Dict, Dict]]:
         """
         Curate information and knowledge for the given topic
 
@@ -389,5 +422,5 @@ class StormKnowledgeCurationModule(KnowledgeCurationModule):
         if return_conversation_log:
             return information_table, StormInformationTable.construct_log_dict(
                 conversations
-            )
-        return information_table
+            ), self.conv_simulator.graph_mindmap
+        return information_table, self.conv_simulator.graph_mindmap

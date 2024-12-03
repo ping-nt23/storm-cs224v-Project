@@ -22,7 +22,7 @@ class StormArticleGenerationModule(ArticleGenerationModule):
         self,
         article_gen_lm=Union[dspy.dsp.LM, dspy.dsp.HFModel],
         retrieve_top_k: int = 5,
-        max_thread_num: int = 10,
+        max_thread_num: int = 1,
     ):
         super().__init__()
         self.retrieve_top_k = retrieve_top_k
@@ -31,7 +31,7 @@ class StormArticleGenerationModule(ArticleGenerationModule):
         self.section_gen = ConvToSection(engine=self.article_gen_lm)
 
     def generate_section(
-        self, topic, section_name, information_table, section_outline, section_query
+        self, topic, section_name, information_table, section_outline, section_query, graph_mindmap
     ):
         collected_info: List[Information] = []
         if information_table is not None:
@@ -43,6 +43,7 @@ class StormArticleGenerationModule(ArticleGenerationModule):
             outline=section_outline,
             section=section_name,
             collected_info=collected_info,
+            graph_mindmap=graph_mindmap
         )
         return {
             "section_name": section_name,
@@ -55,6 +56,7 @@ class StormArticleGenerationModule(ArticleGenerationModule):
         topic: str,
         information_table: StormInformationTable,
         article_with_outline: StormArticle,
+        graph_mindmap: str,
         callback_handler: BaseCallbackHandler = None,
     ) -> StormArticle:
         """
@@ -85,6 +87,7 @@ class StormArticleGenerationModule(ArticleGenerationModule):
                 information_table=information_table,
                 section_outline="",
                 section_query=[topic],
+                graph_mindmap=graph_mindmap
             )
             section_output_dict_collection = [section_output_dict]
         else:
@@ -117,6 +120,7 @@ class StormArticleGenerationModule(ArticleGenerationModule):
                             information_table,
                             section_outline,
                             section_query,
+                            graph_mindmap
                         )
                     ] = section_title
 
@@ -143,7 +147,7 @@ class ConvToSection(dspy.Module):
         self.engine = engine
 
     def forward(
-        self, topic: str, outline: str, section: str, collected_info: List[Information]
+        self, topic: str, outline: str, section: str, collected_info: List[Information], graph_mindmap:str
     ):
         info = ""
         for idx, storm_info in enumerate(collected_info):
@@ -154,14 +158,15 @@ class ConvToSection(dspy.Module):
 
         with dspy.settings.context(lm=self.engine):
             section = ArticleTextProcessing.clean_up_section(
-                self.write_section(topic=topic, info=info, section=section).output
+                self.write_section(topic=topic, info=info, section=section, graph_mindmap=graph_mindmap).output
             )
 
         return dspy.Prediction(section=section)
 
 
 class WriteSection(dspy.Signature):
-    """Write a Wikipedia section based on the collected information.
+    """Write a news section based on the collected information. Do not include extraneous background information. It is assumed the readers know background information about the topic.
+    Use the given graph mindmap in order to connect ideas between connected nodes and connected components within the graph. The graph edge weights correspond to how linked the topics are.
 
     Here is the format of your writing:
         1. Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, "###" Title" to indicate subsubsection title, and so on.
@@ -169,6 +174,7 @@ class WriteSection(dspy.Signature):
     """
 
     info = dspy.InputField(prefix="The collected information:\n", format=str)
+    graph_mindmap = dspy.InputField(prefix="Graph Mindmap:\n", format=str)
     topic = dspy.InputField(prefix="The topic of the page: ", format=str)
     section = dspy.InputField(prefix="The section you need to write: ", format=str)
     output = dspy.OutputField(

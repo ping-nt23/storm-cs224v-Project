@@ -89,6 +89,8 @@ class BingSearch(dspy.Retrieve):
         webpage_helper_max_threads=10,
         mkt="en-US",
         language="en",
+        freshness="week",
+        safeSearch = "Off",
         **kwargs,
     ):
         """
@@ -109,7 +111,7 @@ class BingSearch(dspy.Retrieve):
         else:
             self.bing_api_key = os.environ["BING_SEARCH_API_KEY"]
         self.endpoint = "https://api.bing.microsoft.com/v7.0/search"
-        self.params = {"mkt": mkt, "setLang": language, "count": k, **kwargs}
+        self.params = {"freshness": freshness, "safeSearch": safeSearch, "mkt": mkt, "setLang": language, "count": k, **kwargs}
         self.webpage_helper = WebPageHelper(
             min_char_count=min_char_count,
             snippet_chunk_size=snippet_chunk_size,
@@ -157,7 +159,6 @@ class BingSearch(dspy.Retrieve):
                 results = requests.get(
                     self.endpoint, headers=headers, params={**self.params, "q": query}
                 ).json()
-
                 for d in results["webPages"]["value"]:
                     if self.is_valid_source(d["url"]) and d["url"] not in exclude_urls:
                         url_to_results[d["url"]] = {

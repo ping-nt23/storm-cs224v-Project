@@ -7,7 +7,7 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from typing import Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 from .utils import ArticleTextProcessing
 
@@ -331,7 +331,7 @@ class KnowledgeCurationModule(ABC):
         self.retriever = retriever
 
     @abstractmethod
-    def research(self, topic) -> InformationTable:
+    def research(self, topic) -> Union[InformationTable, Tuple[InformationTable, Dict, Dict]]:
         """
         Curate information and knowledge for the given topic
 
